@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>アレルギーバッジ</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header class="header no-print">
+  <span class="icon">🏥</span>
+  <h1>デジタルアレルギーバッジ</h1>
+</header>
+
+<div class="container" style="padding-top:24px;">
+
+  <!-- Loading -->
+  <div id="loadingSection" class="card">
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>読み込み中...</p>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div id="errorSection" class="card" style="display:none;">
+    <div class="alert alert-error" id="errorMsg"></div>
+    <a href="/" class="btn btn-outline" style="display:inline-flex;margin-top:8px;">
+      ← トップへ戻る
+    </a>
+  </div>
+
+  <!-- Badge -->
+  <div id="badgeSection" class="card" style="display:none;">
+
+    <div class="badge-header">
+      <div class="avatar">👤</div>
+      <h2 id="badgeName"></h2>
+      <p id="badgeUpdated"></p>
+    </div>
+
+    <!-- Allergies -->
+    <div style="margin-bottom:20px;">
+      <h3 style="font-size:0.9rem;font-weight:700;color:#b71c1c;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+        ⚠️ アレルギー情報
+      </h3>
+      <div id="allergyList" class="allergy-list"></div>
+      <div id="noAllergy" class="empty-state" style="display:none;">
+        アレルギー情報の登録はありません
+      </div>
+    </div>
+
+    <!-- Emergency contact & Notes -->
+    <div id="extraInfo"></div>
+
+    <!-- Actions -->
+    <div class="no-print" style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
+      <button class="btn btn-outline btn-sm" onclick="window.print()" style="flex:1;">
+        🖨️ 印刷
+      </button>
+      <button class="btn btn-outline btn-sm" onclick="shareUrl()" style="flex:1;">
+        🔗 共有
+      </button>
+      <a id="editLink" href="#" class="btn btn-outline btn-sm" style="flex:1;text-decoration:none;text-align:center;">
+        ✏️ 編集
+      </a>
+    </div>
+  </div>
+
+  <!-- QR section -->
+  <div id="qrSection" class="card no-print" style="display:none;">
+    <h2>このバッジを共有</h2>
+    <div class="qr-wrap">
+      <img id="qrImage" src="" alt="QRコード">
+      <div class="url-box">
+        <span class="url-text" id="shareUrl"></span>
+        <button class="copy-btn" onclick="copyUrl()">コピー</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SEVERITY_LABELS = { severe: '重篤', moderate: '中等度', mild: '軽度', other: 'その他' };
+const CATEGORY_ICONS = { food: '🍽️', drug: '💊', env: '🌿', other: '➕' };
+
+function getBadgeId() {
+  const path = window.location.pathname;
+  const m = path.match(/\/badge\/([^/]+)/);
+  return m ? m[1] : null;
+}
+
+async function loadBadge() {
+  const id = getBadgeId();
+  if (!id) return showError('IDが指定されていません');
+
+  try {
+    const res = await fetch(`/api/badges/${id}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '取得に失敗しました');
+    renderBadge(data);
+    loadQR(id);
+  } catch (err) {
+    showError(err.message);
+  }
+}
+
+function renderBadge(badge) {
+  document.title = `${badge.name} のアレルギーバッジ`;
+  document.getElementById('badgeName').textContent = badge.name;
+
+  const updated = new Date(badge.updated_at);
+  document.getElementById('badgeUpdated').textContent =
+    `最終更新: ${updated.toLocaleDateString('ja-JP')}`;
+
+  // Edit link
+  document.getElementById('editLink').href = `/edit/${badge.id}`;
+
+  // Allergies
+  const list = document.getElementById('allergyList');
+  if (!badge.allergies || badge.allergies.length === 0) {
+    document.getElementById('noAllergy').style.display = 'block';
+  } else {
+    badge.allergies.forEach(a => {
+      const span = document.createElement('span');
+      const sev = a.severity || 'other';
+      span.className = `allergy-badge ${sev === 'other' ? 'other' : sev}`;
+      const icon = CATEGORY_ICONS[a.category] || '⚠️';
+      const sevLabel = SEVERITY_LABELS[sev] || sev;
+      span.innerHTML = `${icon} ${a.name} <span class="severity-label">${sevLabel}</span>`;
+      list.appendChild(span);
+    });
+  }
+
+  // Extra info
+  const extra = document.getElementById('extraInfo');
+  const rows = [];
+
+  if (badge.emergency_contact) {
+    rows.push({ label: '🆘 緊急連絡先', value: badge.emergency_contact });
+  }
+  if (badge.notes) {
+    rows.push({ label: '📝 備考', value: badge.notes });
+  }
+
+  if (rows.length > 0) {
+    const div = document.createElement('div');
+    div.style.borderTop = '1px solid #e0e0e0';
+    div.style.paddingTop = '16px';
+    rows.forEach(r => {
+      const row = document.createElement('div');
+      row.className = 'info-row';
+      row.innerHTML = `<span class="label">${r.label}</span><span class="value">${escapeHtml(r.value)}</span>`;
+      div.appendChild(row);
+    });
+    extra.appendChild(div);
+  }
+
+  document.getElementById('loadingSection').style.display = 'none';
+  document.getElementById('badgeSection').style.display = 'block';
+}
+
+async function loadQR(id) {
+  try {
+    const res = await fetch(`/api/badges/${id}/qr`);
+    const data = await res.json();
+    if (!res.ok) return;
+    document.getElementById('qrImage').src = data.qr_code;
+    document.getElementById('shareUrl').textContent = data.url;
+    document.getElementById('qrSection').style.display = 'block';
+  } catch {}
+}
+
+function showError(msg) {
+  document.getElementById('loadingSection').style.display = 'none';
+  document.getElementById('errorMsg').textContent = msg;
+  document.getElementById('errorSection').style.display = 'block';
+}
+
+function copyUrl() {
+  const url = document.getElementById('shareUrl').textContent;
+  navigator.clipboard.writeText(url).then(() => alert('URLをコピーしました'));
+}
+
+function shareUrl() {
+  const url = document.getElementById('shareUrl').textContent || window.location.href;
+  if (navigator.share) {
+    navigator.share({ title: document.title, url });
+  } else {
+    navigator.clipboard.writeText(url).then(() => alert('URLをコピーしました'));
+  }
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+loadBadge();
+</script>
+</body>
+</html>

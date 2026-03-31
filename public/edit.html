@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>バッジを編集</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header class="header">
+  <span class="icon">🏥</span>
+  <h1>デジタルアレルギーバッジ</h1>
+</header>
+
+<div class="container" style="padding-top:24px;">
+
+  <!-- Loading -->
+  <div id="loadingSection" class="card">
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>読み込み中...</p>
+    </div>
+  </div>
+
+  <!-- Secret prompt -->
+  <div id="secretSection" class="card" style="display:none;">
+    <h2>編集キーを入力</h2>
+    <p style="font-size:0.9rem;color:#757575;margin-bottom:16px;">
+      バッジを編集するには、作成時に発行された編集キーが必要です。
+    </p>
+    <div id="secretAlert" style="display:none;"></div>
+    <div class="form-group">
+      <label>編集キー<span class="required">*</span></label>
+      <input type="text" id="secretInput" placeholder="編集キーを貼り付けてください">
+    </div>
+    <button class="btn btn-primary" onclick="verifySecret()">確認する</button>
+    <div style="margin-top:12px;">
+      <a id="viewLink" href="#" style="font-size:0.88rem;color:#1565c0;">← バッジを見る</a>
+    </div>
+  </div>
+
+  <!-- Edit form -->
+  <div id="editSection" class="card" style="display:none;">
+    <h2>バッジを編集する</h2>
+
+    <div id="alertBox" style="display:none;"></div>
+
+    <!-- 名前 -->
+    <div class="form-group">
+      <label>氏名<span class="required">*</span></label>
+      <input type="text" id="name" placeholder="例：山田 太郎" maxlength="50">
+    </div>
+
+    <!-- 食物アレルギー -->
+    <div class="form-group">
+      <div class="category-title">🍽️ 食物アレルギー</div>
+      <div class="allergy-grid" id="food-grid"></div>
+    </div>
+
+    <!-- 薬物アレルギー -->
+    <div class="form-group">
+      <div class="category-title">💊 薬物アレルギー</div>
+      <div class="allergy-grid" id="drug-grid"></div>
+    </div>
+
+    <!-- 環境アレルギー -->
+    <div class="form-group">
+      <div class="category-title">🌿 環境アレルギー</div>
+      <div class="allergy-grid" id="env-grid"></div>
+    </div>
+
+    <!-- その他（カスタム） -->
+    <div class="form-group">
+      <div class="category-title">➕ その他のアレルギー</div>
+      <div class="custom-allergy-input">
+        <input type="text" id="customInput" placeholder="例：ラテックス、特定の食材など" maxlength="40">
+        <button class="btn-add-custom" onclick="addCustom()">追加</button>
+      </div>
+      <div class="custom-tags" id="customTags"></div>
+    </div>
+
+    <!-- 緊急連絡先 -->
+    <div class="form-group">
+      <label>緊急連絡先</label>
+      <input type="tel" id="emergency_contact" placeholder="例：090-0000-0000（親族名）" maxlength="60">
+    </div>
+
+    <!-- 備考 -->
+    <div class="form-group">
+      <label>備考・特記事項</label>
+      <textarea id="notes" placeholder="例：エピペンを携帯しています。アナフィラキシー歴あり。" maxlength="300"></textarea>
+    </div>
+
+    <button class="btn btn-primary" onclick="saveBadge()" style="margin-bottom:10px;">
+      💾 保存する
+    </button>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <a id="viewBadgeLink" href="#" class="btn btn-outline" style="flex:1;text-decoration:none;text-align:center;">
+        👁️ バッジを見る
+      </a>
+      <button class="btn btn-danger" onclick="confirmDelete()" style="flex:1;">
+        🗑️ 削除する
+      </button>
+    </div>
+  </div>
+
+  <!-- Success -->
+  <div id="successSection" class="card" style="display:none;">
+    <div class="alert alert-success">バッジを更新しました！</div>
+    <a id="successViewLink" href="#" class="btn btn-secondary" style="display:flex;text-decoration:none;margin-top:8px;">
+      👁️ 更新されたバッジを見る
+    </a>
+    <a href="/" class="btn btn-outline" style="display:flex;text-decoration:none;margin-top:10px;">
+      ➕ 新しいバッジを作成する
+    </a>
+  </div>
+
+</div>
+
+<script>
+const ALLERGIES = {
+  food: [
+    '卵', '乳製品', '小麦', 'そば', '落花生', 'えび', 'かに',
+    'あわび', 'いか', 'いくら', 'オレンジ', 'キウイ',
+    '牛肉', 'くるみ', 'さけ', 'さば', '大豆', '鶏肉',
+    'バナナ', '豚肉', 'りんご', 'もも', 'やまいも',
+    'ごま', 'アーモンド', 'カシューナッツ', 'マカダミアナッツ',
+    'ゼラチン',
+  ],
+  drug: [
+    'アスピリン', 'NSAIDs', 'ペニシリン系', 'セフェム系',
+    '造影剤', 'アセトアミノフェン', 'モルヒネ',
+    'スルファ剤', '局所麻酔薬', 'その他（薬）',
+  ],
+  env: [
+    'スギ花粉', 'ヒノキ花粉', 'ブタクサ花粉', 'イネ科花粉',
+    'ハウスダスト', 'ダニ', '猫', '犬', '昆虫',
+    'カビ', 'ラテックス', '金属（ニッケル）',
+  ],
+};
+
+const SEVERITY_LABELS = { severe: '重篤', moderate: '中等度', mild: '軽度' };
+
+const selected = new Map();
+const customAllergies = [];
+
+let badgeId = '';
+let userSecret = '';
+
+function getBadgeId() {
+  const path = window.location.pathname;
+  const m = path.match(/\/edit\/([^/]+)/);
+  return m ? m[1] : null;
+}
+
+// ---- Build grids ----
+function buildGrid(gridId, items, category) {
+  const grid = document.getElementById(gridId);
+  items.forEach(item => {
+    const key = `${category}::${item}`;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'allergy-item';
+    wrapper.dataset.key = key;
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = `cb_${key}`;
+
+    const lbl = document.createElement('label');
+    lbl.htmlFor = `cb_${key}`;
+    lbl.innerHTML = `<span class="check-icon">✓</span>${item}`;
+
+    cb.addEventListener('change', () => {
+      const row = wrapper.querySelector('.severity-row');
+      if (cb.checked) {
+        if (!selected.has(key)) selected.set(key, 'moderate');
+        row.classList.add('visible');
+        const activeSev = selected.get(key);
+        row.querySelectorAll('.severity-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.sev === activeSev);
+        });
+      } else {
+        selected.delete(key);
+        row.classList.remove('visible');
+        row.querySelectorAll('.severity-btn').forEach(b => b.classList.remove('active'));
+      }
+    });
+
+    const srow = document.createElement('div');
+    srow.className = 'severity-row';
+    ['severe', 'moderate', 'mild'].forEach(sev => {
+      const btn = document.createElement('button');
+      btn.className = `severity-btn ${sev}`;
+      btn.type = 'button';
+      btn.dataset.sev = sev;
+      btn.textContent = SEVERITY_LABELS[sev];
+      btn.addEventListener('click', () => {
+        selected.set(key, sev);
+        srow.querySelectorAll('.severity-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      srow.appendChild(btn);
+    });
+
+    wrapper.appendChild(cb);
+    wrapper.appendChild(lbl);
+    wrapper.appendChild(srow);
+    grid.appendChild(wrapper);
+  });
+}
+
+buildGrid('food-grid', ALLERGIES.food, 'food');
+buildGrid('drug-grid', ALLERGIES.drug, 'drug');
+buildGrid('env-grid', ALLERGIES.env, 'env');
+
+// ---- Custom allergies ----
+function addCustom() {
+  const input = document.getElementById('customInput');
+  const val = input.value.trim();
+  if (!val) return;
+  customAllergies.push({ name: val, severity: 'other' });
+  renderCustomTags();
+  input.value = '';
+}
+
+document.getElementById('customInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); addCustom(); }
+});
+
+function renderCustomTags() {
+  const container = document.getElementById('customTags');
+  container.innerHTML = '';
+  customAllergies.forEach((item, i) => {
+    const tag = document.createElement('span');
+    tag.className = 'custom-tag';
+    tag.innerHTML = `${item.name} <button onclick="removeCustom(${i})">✕</button>`;
+    container.appendChild(tag);
+  });
+}
+
+function removeCustom(i) {
+  customAllergies.splice(i, 1);
+  renderCustomTags();
+}
+
+// ---- Init ----
+async function init() {
+  badgeId = getBadgeId();
+  if (!badgeId) {
+    document.getElementById('loadingSection').style.display = 'none';
+    return;
+  }
+  // Update view links
+  document.getElementById('viewLink').href = `/badge/${badgeId}`;
+
+  // Show secret prompt
+  document.getElementById('loadingSection').style.display = 'none';
+  document.getElementById('secretSection').style.display = 'block';
+}
+
+// ---- Verify secret ----
+async function verifySecret() {
+  const secret = document.getElementById('secretInput').value.trim();
+  if (!secret) { showSecretAlert('編集キーを入力してください'); return; }
+
+  try {
+    // Try a dummy PUT with just the secret to verify it (or load badge first)
+    const res = await fetch(`/api/badges/${badgeId}`);
+    const badge = await res.json();
+    if (!res.ok) throw new Error(badge.error || '取得に失敗しました');
+
+    // We verify the secret by attempting a no-op PUT
+    const testRes = await fetch(`/api/badges/${badgeId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret }),
+    });
+    const testData = await testRes.json();
+    if (!testRes.ok) throw new Error(testData.error || '認証に失敗しました');
+
+    userSecret = secret;
+    populateForm(badge);
+    document.getElementById('secretSection').style.display = 'none';
+    document.getElementById('editSection').style.display = 'block';
+  } catch (err) {
+    showSecretAlert(err.message);
+  }
+}
+
+function showSecretAlert(msg) {
+  const box = document.getElementById('secretAlert');
+  box.className = 'alert alert-error';
+  box.textContent = msg;
+  box.style.display = 'block';
+}
+
+// ---- Populate form ----
+function populateForm(badge) {
+  document.getElementById('name').value = badge.name || '';
+  document.getElementById('emergency_contact').value = badge.emergency_contact || '';
+  document.getElementById('notes').value = badge.notes || '';
+  document.getElementById('viewBadgeLink').href = `/badge/${badge.id}`;
+
+  // Allergies
+  const knownKeys = new Set();
+  ['food', 'drug', 'env'].forEach(cat => ALLERGIES[cat].forEach(item => knownKeys.add(`${cat}::${item}`)));
+
+  (badge.allergies || []).forEach(a => {
+    const key = `${a.category}::${a.name}`;
+    if (knownKeys.has(key)) {
+      selected.set(key, a.severity || 'moderate');
+      const cb = document.getElementById(`cb_${key}`);
+      if (cb) {
+        cb.checked = true;
+        const wrapper = cb.closest('.allergy-item');
+        const srow = wrapper.querySelector('.severity-row');
+        srow.classList.add('visible');
+        srow.querySelectorAll('.severity-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.sev === (a.severity || 'moderate'));
+        });
+      }
+    } else if (a.severity === 'other' || !knownKeys.has(key)) {
+      customAllergies.push({ name: a.name, severity: a.severity || 'other' });
+    }
+  });
+  renderCustomTags();
+}
+
+// ---- Save ----
+async function saveBadge() {
+  const name = document.getElementById('name').value.trim();
+  if (!name) {
+    showAlert('error', '氏名を入力してください');
+    document.getElementById('name').focus();
+    return;
+  }
+
+  const allergies = [];
+  selected.forEach((severity, key) => {
+    const [cat, item] = key.split('::');
+    allergies.push({ name: item, category: cat, severity });
+  });
+  customAllergies.forEach(a => allergies.push(a));
+
+  const body = {
+    secret: userSecret,
+    name,
+    allergies,
+    emergency_contact: document.getElementById('emergency_contact').value.trim(),
+    notes: document.getElementById('notes').value.trim(),
+  };
+
+  const btn = document.querySelector('.btn-primary');
+  btn.disabled = true;
+  btn.textContent = '保存中...';
+
+  try {
+    const res = await fetch(`/api/badges/${badgeId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '保存に失敗しました');
+
+    document.getElementById('successViewLink').href = `/badge/${badgeId}`;
+    document.getElementById('editSection').style.display = 'none';
+    document.getElementById('successSection').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (err) {
+    showAlert('error', err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 保存する';
+  }
+}
+
+// ---- Delete ----
+async function confirmDelete() {
+  if (!confirm('バッジを削除してもよいですか？この操作は元に戻せません。')) return;
+
+  try {
+    const res = await fetch(`/api/badges/${badgeId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: userSecret }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '削除に失敗しました');
+    alert('バッジを削除しました');
+    window.location.href = '/';
+  } catch (err) {
+    showAlert('error', err.message);
+  }
+}
+
+function showAlert(type, msg) {
+  const box = document.getElementById('alertBox');
+  box.className = `alert alert-${type}`;
+  box.textContent = msg;
+  box.style.display = 'block';
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+init();
+</script>
+</body>
+</html>
