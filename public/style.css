@@ -447,6 +447,30 @@ textarea { resize: vertical; min-height: 80px; }
 
 /* ======= Responsive ======= */
 @media (max-width: 480px) {
-  .allergy-grid { grid-template-columns: repeat(2, 1fr); }
-  .badge-header h2 { font-size: 1.3rem; }
+  .container { padding: 10px; }
+  .card { padding: 16px; }
+
+  .allergy-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .allergy-item label { padding: 7px 8px; font-size: 0.82rem; }
+
+  .badge-header { margin: -16px -16px 16px; padding: 16px; }
+  .badge-header h2 { font-size: 1.2rem; }
+  .badge-header .avatar { width: 52px; height: 52px; font-size: 1.6rem; }
+
+  .allergy-badge { font-size: 0.85rem; padding: 7px 11px; }
+
+  .custom-allergy-input { flex-direction: column; }
+  .btn-add-custom { width: 100%; }
+
+  /* ボタンを縦並びに */
+  .btn-row-mobile { flex-direction: column !important; }
+
+  input[type="text"],
+  input[type="tel"],
+  textarea { font-size: 16px; /* iOSズーム防止 */ }
+
+  .url-box { flex-direction: column; gap: 6px; }
+  .copy-btn { width: 100%; text-align: center; padding: 8px; }
+
+  .secret-box code { font-size: 0.75rem; }
 }
