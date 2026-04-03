@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>デジタルアレルギーバッジ</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header class="header">
+  <span class="icon">🏥</span>
+  <h1>デジタルアレルギーバッジ</h1>
+</header>
+
+<div class="container" style="padding-top:24px;">
+
+  <!-- Hero -->
+  <div class="card" style="text-align:center; background:linear-gradient(135deg,#ffebee,#fff);">
+    <p style="font-size:3rem;margin-bottom:8px;">🔖</p>
+    <h2 style="border:none;color:#b71c1c;font-size:1.3rem;">あなたのアレルギー情報をデジタルで管理</h2>
+    <p style="color:#757575;font-size:0.9rem;margin-top:6px;">
+      QRコード・リンクを共有するだけで、いつでもどこでもアレルギー情報を確認できます
+    </p>
+    <div style="display:flex;justify-content:center;gap:20px;margin-top:16px;flex-wrap:wrap;">
+      <div style="text-align:center;">
+        <div style="font-size:1.5rem;">📱</div>
+        <div style="font-size:0.78rem;color:#757575;">QRコード対応</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:1.5rem;">🔗</div>
+        <div style="font-size:0.78rem;color:#757575;">URLで共有</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:1.5rem;">✏️</div>
+        <div style="font-size:0.78rem;color:#757575;">いつでも編集</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:1.5rem;">🖨️</div>
+        <div style="font-size:0.78rem;color:#757575;">印刷対応</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create form -->
+  <div id="formSection" class="card">
+    <h2>バッジを作成する</h2>
+
+    <div id="alertBox" style="display:none;"></div>
+
+    <!-- 名前 -->
+    <div class="form-group">
+      <label>氏名<span class="required">*</span></label>
+      <input type="text" id="name" placeholder="例：山田 太郎" maxlength="50">
+    </div>
+
+    <!-- 食物アレルギー -->
+    <div class="form-group">
+      <div class="category-title">🍽️ 食物アレルギー</div>
+      <div class="allergy-grid" id="food-grid"></div>
+    </div>
+
+    <!-- 薬物アレルギー -->
+    <div class="form-group">
+      <div class="category-title">💊 薬物アレルギー</div>
+      <div class="allergy-grid" id="drug-grid"></div>
+    </div>
+
+    <!-- 環境アレルギー -->
+    <div class="form-group">
+      <div class="category-title">🌿 環境アレルギー</div>
+      <div class="allergy-grid" id="env-grid"></div>
+    </div>
+
+    <!-- その他（カスタム） -->
+    <div class="form-group">
+      <div class="category-title">➕ その他のアレルギー</div>
+      <div class="custom-allergy-input">
+        <input type="text" id="customInput" placeholder="例：ラテックス、特定の食材など" maxlength="40">
+        <button class="btn-add-custom" onclick="addCustom()">追加</button>
+      </div>
+      <div class="custom-tags" id="customTags"></div>
+    </div>
+
+    <!-- 緊急連絡先 -->
+    <div class="form-group">
+      <label>緊急連絡先</label>
+      <input type="tel" id="emergency_contact" placeholder="例：090-0000-0000（親族名）" maxlength="60">
+    </div>
+
+    <!-- 備考 -->
+    <div class="form-group">
+      <label>備考・特記事項</label>
+      <textarea id="notes" placeholder="例：エピペンを携帯しています。アナフィラキシー歴あり。" maxlength="300"></textarea>
+    </div>
+
+    <button class="btn btn-primary" onclick="createBadge()">
+      🔖 バッジを作成する
+    </button>
+  </div>
+
+  <!-- Result -->
+  <div id="resultSection" class="card" style="display:none;">
+    <h2>バッジが作成されました！</h2>
+
+    <div class="alert alert-success">
+      バッジを作成しました。以下のURLまたはQRコードを共有してください。
+    </div>
+
+    <div class="qr-wrap">
+      <img id="qrImg" src="" alt="QRコード">
+      <div class="url-box">
+        <span class="url-text" id="badgeUrl"></span>
+        <button class="copy-btn" onclick="copyUrl()">コピー</button>
+      </div>
+    </div>
+
+    <div class="secret-box">
+      <h3>⚠️ 編集キー（必ず保存してください）</h3>
+      <p style="font-size:0.82rem;color:#856404;margin-bottom:8px;">
+        このキーを使ってバッジを編集・削除できます。<strong>再表示できませんので必ずメモしてください。</strong>
+      </p>
+      <code id="secretKey"></code>
+      <button class="copy-btn" style="margin-top:8px;" onclick="copySecret()">編集キーをコピー</button>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
+      <button class="btn btn-secondary" onclick="viewBadge()" style="flex:1;">
+        👁️ バッジを見る
+      </button>
+      <button class="btn btn-outline" onclick="printBadge()" style="flex:1;">
+        🖨️ 印刷する
+      </button>
+    </div>
+
+    <div style="margin-top:12px;">
+      <button class="btn btn-outline" onclick="resetForm()" style="width:100%;">
+        ➕ 別のバッジを作成する
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ---- Allergy data ----
+const ALLERGIES = {
+  food: [
+    '卵', '乳製品', '小麦', 'そば', '落花生', 'えび', 'かに',
+    'あわび', 'いか', 'いくら', 'オレンジ', 'キウイ',
+    '牛肉', 'くるみ', 'さけ', 'さば', '大豆', '鶏肉',
+    'バナナ', '豚肉', 'りんご', 'もも', 'やまいも',
+    'ごま', 'アーモンド', 'カシューナッツ', 'マカダミアナッツ',
+    'ゼラチン',
+  ],
+  drug: [
+    'アスピリン', 'NSAIDs', 'ペニシリン系', 'セフェム系',
+    '造影剤', 'アセトアミノフェン', 'モルヒネ',
+    'スルファ剤', '局所麻酔薬', 'その他（薬）',
+  ],
+  env: [
+    'スギ花粉', 'ヒノキ花粉', 'ブタクサ花粉', 'イネ科花粉',
+    'ハウスダスト', 'ダニ', '猫', '犬', '昆虫',
+    'カビ', 'ラテックス', '金属（ニッケル）',
+  ],
+};
+
+const SEVERITY_LABELS = { severe: '重篤', moderate: '中等度', mild: '軽度' };
+
+// State: Map of allergyKey → severity
+const selected = new Map();
+const customAllergies = [];
+
+let createdBadgeUrl = '';
+let createdSecret = '';
+let createdId = '';
+
+// ---- Build grids ----
+function buildGrid(gridId, items, category) {
+  const grid = document.getElementById(gridId);
+  items.forEach(item => {
+    const key = `${category}::${item}`;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'allergy-item';
+    wrapper.dataset.key = key;
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = `cb_${key}`;
+
+    const lbl = document.createElement('label');
+    lbl.htmlFor = `cb_${key}`;
+    lbl.innerHTML = `<span class="check-icon">✓</span>${item}`;
+
+    cb.addEventListener('change', () => {
+      const row = wrapper.querySelector('.severity-row');
+      if (cb.checked) {
+        selected.set(key, 'moderate');
+        row.classList.add('visible');
+        row.querySelector('.severity-btn.moderate').classList.add('active');
+      } else {
+        selected.delete(key);
+        row.classList.remove('visible');
+        row.querySelectorAll('.severity-btn').forEach(b => b.classList.remove('active'));
+      }
+    });
+
+    // Severity row
+    const srow = document.createElement('div');
+    srow.className = 'severity-row';
+    ['severe', 'moderate', 'mild'].forEach(sev => {
+      const btn = document.createElement('button');
+      btn.className = `severity-btn ${sev}`;
+      btn.type = 'button';
+      btn.textContent = SEVERITY_LABELS[sev];
+      btn.addEventListener('click', () => {
+        selected.set(key, sev);
+        srow.querySelectorAll('.severity-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      srow.appendChild(btn);
+    });
+
+    wrapper.appendChild(cb);
+    wrapper.appendChild(lbl);
+    wrapper.appendChild(srow);
+    grid.appendChild(wrapper);
+  });
+}
+
+buildGrid('food-grid', ALLERGIES.food, 'food');
+buildGrid('drug-grid', ALLERGIES.drug, 'drug');
+buildGrid('env-grid', ALLERGIES.env, 'env');
+
+// ---- Custom allergies ----
+function addCustom() {
+  const input = document.getElementById('customInput');
+  const val = input.value.trim();
+  if (!val) return;
+  customAllergies.push({ name: val, severity: 'other' });
+  renderCustomTags();
+  input.value = '';
+}
+
+document.getElementById('customInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); addCustom(); }
+});
+
+function renderCustomTags() {
+  const container = document.getElementById('customTags');
+  container.innerHTML = '';
+  customAllergies.forEach((item, i) => {
+    const tag = document.createElement('span');
+    tag.className = 'custom-tag';
+    tag.innerHTML = `${item.name} <button onclick="removeCustom(${i})">✕</button>`;
+    container.appendChild(tag);
+  });
+}
+
+function removeCustom(i) {
+  customAllergies.splice(i, 1);
+  renderCustomTags();
+}
+
+// ---- Create badge ----
+async function createBadge() {
+  const name = document.getElementById('name').value.trim();
+  if (!name) {
+    showAlert('error', '氏名を入力してください');
+    document.getElementById('name').focus();
+    return;
+  }
+
+  const allergies = [];
+  selected.forEach((severity, key) => {
+    const [cat, item] = key.split('::');
+    allergies.push({ name: item, category: cat, severity });
+  });
+  customAllergies.forEach(a => allergies.push(a));
+
+  const body = {
+    name,
+    allergies,
+    emergency_contact: document.getElementById('emergency_contact').value.trim(),
+    notes: document.getElementById('notes').value.trim(),
+  };
+
+  const btn = document.querySelector('.btn-primary');
+  btn.disabled = true;
+  btn.textContent = '作成中...';
+
+  try {
+    const res = await fetch('/api/badges', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '作成に失敗しました');
+
+    createdBadgeUrl = data.url;
+    createdSecret = data.secret;
+    createdId = data.id;
+
+    document.getElementById('qrImg').src = data.qr_code;
+    document.getElementById('badgeUrl').textContent = data.url;
+    document.getElementById('secretKey').textContent = data.secret;
+
+    document.getElementById('formSection').style.display = 'none';
+    document.getElementById('resultSection').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (err) {
+    showAlert('error', err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔖 バッジを作成する';
+  }
+}
+
+function showAlert(type, msg) {
+  const box = document.getElementById('alertBox');
+  box.className = `alert alert-${type}`;
+  box.textContent = msg;
+  box.style.display = 'block';
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function viewBadge() { window.open(`/badge/${createdId}`, '_blank'); }
+function printBadge() {
+  const w = window.open(`/badge/${createdId}`, '_blank');
+  w.onload = () => w.print();
+}
+function copyUrl() {
+  navigator.clipboard.writeText(createdBadgeUrl).then(() => alert('URLをコピーしました'));
+}
+function copySecret() {
+  navigator.clipboard.writeText(createdSecret).then(() => alert('編集キーをコピーしました'));
+}
+
+function resetForm() {
+  document.getElementById('formSection').style.display = 'block';
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('alertBox').style.display = 'none';
+  document.getElementById('name').value = '';
+  document.getElementById('emergency_contact').value = '';
+  document.getElementById('notes').value = '';
+  selected.clear();
+  customAllergies.length = 0;
+  renderCustomTags();
+  document.querySelectorAll('.allergy-item input[type="checkbox"]').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.allergy-item').querySelector('.severity-row').classList.remove('visible');
+    cb.closest('.allergy-item').querySelectorAll('.severity-btn').forEach(b => b.classList.remove('active'));
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
